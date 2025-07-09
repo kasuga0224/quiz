@@ -25,8 +25,8 @@
 <div id="app-container" class="max-w-4xl mx-auto p-4 md:p-8"></div>
 
 <script>
-// --- クイズデータ ---
-// 本来は外部ファイルから読み込みますが、ここでは直接埋め込んでいます。
+// --- 問題データ ---
+// このセクションに問題データを入力してください
 const quizDataOriginal = {
  "販売・経営管理 (選択式)": [
     { "type": "multiple-choice", "question": "問題解決のための教育方法の一つである [ ] とは多くの職場で起こりうるような案件を的確かつ迅速に精度高く処理することができるのかを測るシミュレーション演習のことである。", "options": ["ケーススタディメソッド", "プロジェクト法", "インバスケット法", "マネジメントゲーム"], "answer": "インバスケット法", "explanation": "インバスケット法は、受講者を架空の役職者に設定し、未処理の案件が溜まった書類箱（インバスケット）を渡して、制限時間内に案件を処理させる演習です。優先順位付け、情報分析、意思決定、指示・伝達能力など、管理者に求められる総合的な問題解決能力を評価・育成するために用いられます。" },
@@ -547,21 +547,18 @@ const quizDataOriginal = {
   ],
 };
 
+// -------------------- ここまで --------------------
 
-// --- アプリケーション本体のスクリプト ---
-
-// カテゴリごとのテーマカラー
+// 以降はアプリ本体のスクリプト
 const genreColors = {
     "小売業の類型": 'border-indigo-500',
     "マーチャンダイジング": 'border-teal-500',
     "ストアオペレーション": 'border-amber-500',
     "マーケティング": 'border-rose-500',
     "販売・経営管理": 'border-sky-500',
-    "総合60問模試": 'border-purple-500',
-    "間違えた問題の再挑戦": 'border-orange-500'
+    "総合50問模試": 'border-purple-500'
 };
 
-// メニュー画面での表示順
 const displayOrder = [
     "小売業の類型 (選択式)", "小売業の類型 (記述式)",
     "マーチャンダイジング (選択式)", "マーチャンダイジング (記述式)",
@@ -570,16 +567,15 @@ const displayOrder = [
     "販売・経営管理 (選択式)", "販売・経営管理 (記述式)"
 ];
 
-// アプリケーションの状態を管理する変数
 let currentList = [];
 let currentIndex = 0;
 let correctCount = 0;
 let incorrectCount = 0;
 let incorrectQuestions = [];
+let currentQuizTitle = '';
 
 const app = document.getElementById("app-container");
 
-// メニュー画面を初期化・表示する関数
 function initMenu() {
     app.innerHTML = `
         <header class="text-center mb-8">
@@ -591,13 +587,12 @@ function initMenu() {
 
     const grid = document.getElementById("menu-grid");
 
-    // 総合60問模試ボタン
     const comprehensiveBtn = document.createElement("button");
     comprehensiveBtn.className = "btn-comprehensive p-6 rounded-xl shadow-lg hover:shadow-xl text-left transition-all col-span-1 md:col-span-2 flex items-center justify-between";
     comprehensiveBtn.innerHTML = `
         <div>
-            <h2 class="text-xl font-bold mb-1">総合60問模試 🚀</h2>
-            <p class="text-sm text-white/90">全カテゴリから選択式30問、記述式30問をランダム出題</p>
+            <h2 class="text-xl font-bold mb-1">総合50問模試 🚀</h2>
+            <p class="text-sm text-white/90">全カテゴリからランダムで50問を出題</p>
         </div>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white/80" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" />
@@ -606,26 +601,17 @@ function initMenu() {
     comprehensiveBtn.onclick = () => startComprehensiveQuiz();
     grid.appendChild(comprehensiveBtn);
 
-    // 前回の間違いに再挑戦ボタン（間違えた問題がある場合のみ表示）
     if (incorrectQuestions.length > 0) {
         const retryBtn = document.createElement("button");
         retryBtn.className = "btn-retry p-6 rounded-xl shadow hover:shadow-lg text-left transition-all col-span-1 md:col-span-2";
         retryBtn.innerHTML = `
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-bold mb-1">前回の間違いに再挑戦 💪</h2>
-                    <p class="text-sm text-white/90">問題数：${incorrectQuestions.length}</p>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white/80" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V4a1 1 0 011-1zm10 8a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 111.885-.666A5.002 5.002 0 0014.001 13H11a1 1 0 01-1-1z" clip-rule="evenodd" />
-                </svg>
-            </div>
+            <h2 class="text-lg font-bold mb-2">前回の間違いに再挑戦 💪</h2>
+            <p class="text-sm text-white/90">問題数：${incorrectQuestions.length}</p>
         `;
         retryBtn.onclick = () => startRetryQuiz();
         grid.appendChild(retryBtn);
     }
 
-    // 各カテゴリのボタン
     displayOrder.forEach(key => {
         if (!quizDataOriginal[key] || quizDataOriginal[key].length === 0) return;
         const baseGenreName = key.split(' ')[0];
@@ -642,78 +628,53 @@ function initMenu() {
     });
 }
 
-// カテゴリ別クイズを開始する関数
 function startQuiz(key) {
-    currentList = [...quizDataOriginal[key]];
+    currentList = JSON.parse(JSON.stringify(quizDataOriginal[key]));
     currentIndex = 0;
     correctCount = 0;
     incorrectCount = 0;
-    renderQuizPage(key);
+    currentQuizTitle = key;
+    renderQuizPage();
 }
 
-// 総合模試を開始する関数
 function startComprehensiveQuiz() {
-    let multipleChoicePool = [];
-    let fillInTheBlankPool = [];
-
-    // 全ての問題をタイプ別に分類し、ジャンル情報を付加
+    let allQuestions = [];
     for (const key in quizDataOriginal) {
-        const baseGenreName = key.split(' ')[0];
-        quizDataOriginal[key].forEach(q => {
-            const questionWithGenre = {...q, genre: baseGenreName};
-            if (q.type === 'multiple-choice') {
-                multipleChoicePool.push(questionWithGenre);
-            } else if (q.type === 'fill-in-the-blank') {
-                fillInTheBlankPool.push(questionWithGenre);
-            }
-        });
-    }
-
-    // 配列をシャッフルするヘルパー関数
-    const shuffleArray = (array) => {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+        if (quizDataOriginal[key] && quizDataOriginal[key].length > 0) {
+            const baseGenreName = key.split(' ')[0];
+            const questionsWithGenre = quizDataOriginal[key].map(q => ({...q, genre: baseGenreName}));
+            allQuestions = allQuestions.concat(questionsWithGenre);
         }
-        return array;
-    };
-
-    // 各プールをシャッフル
-    shuffleArray(multipleChoicePool);
-    shuffleArray(fillInTheBlankPool);
-
-    // 各プールから30問ずつ抽出
-    const selectedMultipleChoice = multipleChoicePool.slice(0, 30);
-    const selectedFillInTheBlank = fillInTheBlankPool.slice(0, 30);
-
-    // 抽出した問題を結合して再度シャッフル
-    currentList = shuffleArray([...selectedMultipleChoice, ...selectedFillInTheBlank]);
-
+    }
+    for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+    }
+    currentList = JSON.parse(JSON.stringify(allQuestions.slice(0, 50)));
     currentIndex = 0;
     correctCount = 0;
     incorrectCount = 0;
-    incorrectQuestions = []; // 新しい模試なのでリセット
-    renderQuizPage("総合60問模試");
+    incorrectQuestions = [];
+    currentQuizTitle = "総合50問模試";
+    renderQuizPage();
 }
 
-
-// 間違えた問題の再挑戦を開始する関数
 function startRetryQuiz() {
     if (incorrectQuestions.length === 0) {
-        // 通常はメニューにボタンが表示されないので、このアラートは不要だが念のため
-        alert("再挑戦する問題がありません。");
+        console.log("再挑戦する問題がありません。");
         return;
     }
-    currentList = [...incorrectQuestions]; // 間違えた問題リストをコピー
+    currentList = JSON.parse(JSON.stringify(incorrectQuestions));
     currentIndex = 0;
     correctCount = 0;
     incorrectCount = 0;
-    incorrectQuestions = []; // 再挑戦で間違えた問題は再度ここに追加される
-    renderQuizPage("間違えた問題の再挑戦");
+    incorrectQuestions = [];
+    currentQuizTitle = "間違えた問題の再挑戦";
+    renderQuizPage();
 }
 
-// クイズ画面を描画する関数
-function renderQuizPage(title) {
+function renderQuizPage() {
+    const title = currentQuizTitle;
     const data = currentList[currentIndex];
     const baseGenreName = data.genre || title.split(' ')[0];
     const colorClass = genreColors[baseGenreName] ? genreColors[baseGenreName].replace('border-', 'bg-').replace('-500', '-100') : 'bg-slate-100';
@@ -724,7 +685,7 @@ function renderQuizPage(title) {
             <div class="flex justify-between items-center flex-wrap gap-2">
                 <h2 class="text-xl md:text-2xl font-bold text-slate-900">${title}</h2>
                 <div class="flex items-center space-x-2 md:space-x-4">
-                     <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold">
+                     <span id="correct-count" class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold">
                         正解: ${correctCount}
                     </span>
                     <span class="px-3 py-1 bg-slate-200 text-slate-700 rounded-full text-sm font-semibold">
@@ -743,16 +704,30 @@ function renderQuizPage(title) {
             <p class="text-lg leading-relaxed mt-4 whitespace-pre-wrap">${data.question}</p>
             <div id="answer-area" class="mt-6 space-y-3"></div>
         </div>
-        <div id="feedback" class="mt-4 min-h-[60px]"></div>
-        <footer class="mt-6 flex justify-between items-center">
-            <button id="back-to-menu" class="px-6 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 rounded-lg transition-colors">終了</button>
-            <button id="next-question" class="px-8 py-3 bg-blue-600 text-white rounded-lg opacity-50" disabled>次へ</button>
+        <div id="feedback" class="mt-2 min-h-[60px]"></div>
+        <footer class="mt-4 flex justify-between items-center">
+            <button id="back-to-menu" class="w-auto px-6 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 rounded-lg transition-colors">終了</button>
+            <div class="flex items-center gap-2">
+                <button id="prev-question" class="w-auto px-6 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition-colors">戻る</button>
+                <button id="next-question" class="w-auto px-8 py-3 bg-blue-600 text-white rounded-lg">次へ</button>
+            </div>
         </footer>`;
 
     const answerArea = document.getElementById("answer-area");
+    const nextButton = document.getElementById('next-question');
+    const prevButton = document.getElementById('prev-question');
+
+    document.getElementById("back-to-menu").onclick = initMenu;
+    nextButton.onclick = handleNextQuestion;
+    prevButton.onclick = handlePrevQuestion;
+
+    prevButton.disabled = currentIndex === 0;
+    prevButton.classList.toggle('opacity-50', currentIndex === 0);
+
     if (data.type === "multiple-choice") {
-        // 選択肢をシャッフルして表示
-        const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
+        const shuffledOptions = data.shuffledOptions || [...data.options].sort(() => Math.random() - 0.5);
+        if (!data.shuffledOptions) data.shuffledOptions = shuffledOptions;
+
         shuffledOptions.forEach(optionText => {
             const btn = document.createElement("button");
             btn.className = "quiz-option w-full text-left p-4 border-2 border-slate-200 rounded-lg hover:bg-slate-50 hover:border-blue-400";
@@ -760,102 +735,143 @@ function renderQuizPage(title) {
             btn.onclick = () => checkAnswer(optionText);
             answerArea.appendChild(btn);
         });
-    } else { // 記述式の場合
+    } else {
         answerArea.innerHTML = `
             <input id="fill-in-answer" type="text" class="w-full p-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="解答を入力してください">
-             <button id="submit-fill-in" class="w-full mt-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">解答する</button>
         `;
         const input = document.getElementById("fill-in-answer");
-        const submitBtn = document.getElementById("submit-fill-in");
-        
-        submitBtn.onclick = () => {
-            const userAnswer = input.value;
-            if(userAnswer.trim() !== "") {
-                checkAnswer(userAnswer);
-            }
-        };
-
         input.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                submitBtn.click();
+            if (event.key === 'Tab' && !event.shiftKey) {
+                event.preventDefault(); 
+                nextButton.focus(); 
             }
         });
-        
-        // 記述式では「次へ」ボタンは解答後に有効化するため、最初は非表示
-        document.getElementById('next-question').style.display = 'none';
     }
 
-    document.getElementById("back-to-menu").onclick = initMenu;
-    document.getElementById("next-question").onclick = handleNextQuestion;
+    if (data.isChecked) {
+        restoreAnsweredState(data);
+    } else {
+        nextButton.disabled = data.type === 'multiple-choice';
+        nextButton.classList.toggle('opacity-50', data.type === 'multiple-choice');
+    }
 }
 
-// 解答をチェックする関数
-function checkAnswer(userAnswer) {
-    const data = currentList[currentIndex];
-    const isCorrect = userAnswer.trim() === data.answer.trim();
+function restoreAnsweredState(data) {
+    const isCorrect = data.userAnswer.trim() === data.answer.trim();
     const feedback = document.getElementById("feedback");
     const nextButton = document.getElementById('next-question');
 
-    // フィードバック（正解・不正解と解説）を表示
-    const feedbackContent = `
+    feedback.innerHTML = `
         <div class="p-4 rounded-lg explanation-box ${isCorrect ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'bg-red-50 border-l-4 border-red-500'}">
             <h3 class="font-bold ${isCorrect ? 'text-emerald-700' : 'text-red-700'}">${isCorrect ? "正解！" : `不正解… (正解: ${data.answer})`}</h3>
             <p class="mt-1 text-sm text-slate-600">${data.explanation || ""}</p>
         </div>
     `;
-    feedback.innerHTML = feedbackContent;
 
-    if (isCorrect) {
-        correctCount++;
-    } else {
-        incorrectCount++;
-        // 重複を避けて間違えた問題リストに追加
-        if (!incorrectQuestions.some(q => q.question === data.question)) {
-             incorrectQuestions.push(data);
-        }
-    }
-
-    // 解答後は操作を無効化
     if (data.type === "multiple-choice") {
         const optionButtons = document.querySelectorAll(".quiz-option");
         optionButtons.forEach(btn => {
             btn.disabled = true;
             if (btn.textContent.trim() === data.answer.trim()) {
                 btn.classList.add("correct");
-            } else if (btn.textContent.trim() === userAnswer.trim()){
+            } else if (btn.textContent.trim() === data.userAnswer.trim()){
                 btn.classList.add("incorrect");
             }
         });
     } else {
-        document.getElementById("fill-in-answer").disabled = true;
-        document.getElementById("submit-fill-in").style.display = 'none';
+        const input = document.getElementById("fill-in-answer");
+        input.value = data.userAnswer;
+        input.disabled = true;
     }
 
-    // 「次へ」ボタンを有効化して表示
-    nextButton.style.display = 'block';
     nextButton.disabled = false;
     nextButton.classList.remove('opacity-50');
 }
 
+function checkAnswer(userAnswer) {
+    const data = currentList[currentIndex];
+    if (data.isChecked) return;
 
-function handleNextQuestion() {
-     // 次の問題へ進む前に少し間を置く
-    setTimeout(() => {
-        currentIndex++;
-        if (currentIndex < currentList.length) {
-            renderQuizPage(document.querySelector("h2").textContent);
-        } else {
-            showResult();
+    data.userAnswer = userAnswer;
+    data.isChecked = true;
+
+    const isCorrect = userAnswer.trim() === data.answer.trim();
+    if (isCorrect) {
+        correctCount++;
+    } else {
+        incorrectCount++;
+        if (!incorrectQuestions.some(q => q.question === data.question)) {
+             incorrectQuestions.push(JSON.parse(JSON.stringify(data)));
         }
-    }, 500); // 0.5秒のディレイ
+    }
+    
+    document.getElementById('correct-count').textContent = `正解: ${correctCount}`;
+    restoreAnsweredState(data);
 }
 
-// 結果画面を表示する関数
+function handleNextQuestion() {
+    const data = currentList[currentIndex];
+    if (data.isChecked) {
+        goToNextOrShowResult();
+    } else {
+        if (data.type === "fill-in-the-blank") {
+            const userAnswer = document.getElementById("fill-in-answer").value;
+            if (userAnswer.trim() === "") {
+               const feedback = document.getElementById("feedback");
+               feedback.innerHTML = `<div class="p-4 rounded-lg explanation-box bg-yellow-50 border-l-4 border-yellow-500"><h3 class="font-bold text-yellow-700">解答が入力されていません</h3></div>`;
+               return;
+            }
+            checkAnswer(userAnswer);
+        }
+    }
+}
+
+// ★修正点: 「戻る」ボタンのロジックを簡潔にし、確実に動作するように修正
+function handlePrevQuestion() {
+    if (currentIndex > 0) {
+        // 前の問題に戻る
+        currentIndex--;
+
+        // 戻った先のクイズの状態（解答履歴、正誤カウント）をリセットする
+        const questionToReset = currentList[currentIndex];
+        if (questionToReset.isChecked) {
+            const wasCorrect = questionToReset.userAnswer.trim() === questionToReset.answer.trim();
+            if (wasCorrect) {
+                correctCount--;
+            } else {
+                incorrectCount--;
+                const incorrectIndex = incorrectQuestions.findIndex(q => q.question === questionToReset.question);
+                if (incorrectIndex > -1) {
+                    incorrectQuestions.splice(incorrectIndex, 1);
+                }
+            }
+            // isCheckedプロパティなどを削除して、未解答の状態に戻す
+            delete questionToReset.isChecked;
+            delete questionToReset.userAnswer;
+            if (questionToReset.type === 'multiple-choice') {
+                delete questionToReset.shuffledOptions;
+            }
+        }
+        
+        // ページを再描画
+        renderQuizPage();
+    }
+}
+
+
+function goToNextOrShowResult() {
+    currentIndex++;
+    if (currentIndex < currentList.length) {
+        renderQuizPage();
+    } else {
+        showResult();
+    }
+}
+
 function showResult() {
     const total = currentList.length;
     const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-    const title = document.querySelector("h2") ? document.querySelector("h2").textContent : "クイズ";
+    const title = currentQuizTitle;
 
     let resultHTML = `
         <div class="text-center bg-white p-8 rounded-xl shadow-lg">
@@ -868,7 +884,6 @@ function showResult() {
             <div class="flex flex-col md:flex-row gap-4 justify-center">
                 <button class="w-full md:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors" onclick="initMenu()">メニューへ戻る</button>
     `;
-    // 間違えた問題が1つでもあれば再挑戦ボタンを表示
     if (incorrectCount > 0) {
         resultHTML += `<button class="w-full md:w-auto px-8 py-3 btn-retry hover:bg-orange-600 text-white rounded-lg transition-colors" onclick="startRetryQuiz()">間違えた問題を再挑戦 (${incorrectCount}問)</button>`;
     }
@@ -879,7 +894,7 @@ function showResult() {
     app.innerHTML = resultHTML;
 }
 
-// ページ読み込み完了時にメニューを初期化
+// 初期化
 window.onload = function() {
     initMenu();
 };
